@@ -4,7 +4,7 @@
 '''HTTPs server classes.'''
 
 __all__ = [
-    'HTTPSServer', 'ThreadingHTTPSServer'
+    'HTTPSServer', 'ThreadingHTTPSServer', 'main'
 ]
 
 import OpenSSL
@@ -99,14 +99,14 @@ def test(HandlerClass=http.server.BaseHTTPRequestHandler, ServerClass=ThreadingH
             sys.exit(0)
 
 # modified from: cpython/blob/3.10/Lib/http/server.py
-if __name__ == '__main__':
+def main():
     import argparse
     import contextlib
     import functools
     import socket
     import os
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='Start an HTTPs server.')
     parser.add_argument('--cgi', action='store_true', help='Run as CGI Server')
     parser.add_argument('--bind', '-b', metavar='ADDRESS', help='Specify alternate bind address [default: all interfaces]')
     parser.add_argument('--directory', '-d', default=os.getcwd(), help='Specify alternative directory [default:current directory]')
@@ -147,3 +147,6 @@ if __name__ == '__main__':
             for path in [keyfile, '{}.pub'.format(keyfile), certfile]:
                 if os.path.isfile(path):
                     os.unlink(path)
+
+if __name__ == '__main__':
+    main()

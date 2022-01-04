@@ -31,7 +31,8 @@ setuptools.setup(
     },
     entry_points={
         'console_scripts': [
-            'sserv=tool:main'
+            'sserv=https:main'
+            'urlparse=urlparse:main'
         ],
     },
 )
