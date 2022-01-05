@@ -9,6 +9,7 @@ __all__ = [
 
 import OpenSSL
 import http.server
+import socket
 import socketserver
 import ssl
 import sys

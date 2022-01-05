@@ -1,3 +1,4 @@
+import os
 import re
 import setuptools
 import sys
@@ -7,10 +8,10 @@ for command in ['register', 'upload']:
         print('Command {} is not allowed for this module.'.format(command))
         sys.exit(1)
 
-with open('requirements.txt', 'r', encoding='utf-8') as file:
+path = os.path.dirname(os.path.abspath(__file__))
+with open('{}/requirements.txt'.format(path), 'r', encoding='utf-8') as file:
     # Match an valid requirement without matching a comment
-    regex = re.compile(r'^\s*\w+(\s*[=<>]?=\s*[0-9.]+)?')
-    install_requires = [regex.search(line) for line in file]
+    install_requires = re.findall(r'^[^#].*$', file.read(), re.MULTILINE)
 
 setuptools.setup(
     name='scripts',
@@ -22,8 +23,7 @@ setuptools.setup(
         'Bug Reports': 'https://github.com/EvanMcBroom/scripts/issues',
         'Source Code': 'https://github.com/EvanMcBroom/scripts/tree/master/scripts'
     },
-    package_dir={'': 'scripts'},
-    packages=setuptools.find_packages(where='scripts'),
+    packages=setuptools.find_packages(where=path),
     python_requires='>=3.6',
     install_requires=install_requires,
     extras_require={
@@ -31,8 +31,8 @@ setuptools.setup(
     },
     entry_points={
         'console_scripts': [
-            'sserv=https:main'
-            'urlparse=urlparse:main'
+            'sserv=scripts.https:main',
+            'urlparse=scripts.urlparse:main'
         ],
     },
 )
