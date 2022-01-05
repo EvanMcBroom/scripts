@@ -8,7 +8,7 @@ These are my scripts and utility code for \*nix boxes.
 
 ```bash
 git clone https://github.com/EvanMcBroom/scripts
-pip3 install scripts
+pip3 install ./scripts
 ```
 
 ## ...or run in a docker container.
