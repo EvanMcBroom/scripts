@@ -109,10 +109,10 @@ def main():
 
     parser = argparse.ArgumentParser(description='Start an HTTPs server.')
     parser.add_argument('--cgi', action='store_true', help='Run as CGI Server')
-    parser.add_argument('--bind', '-b', metavar='ADDRESS', help='Specify alternate bind address [default: all interfaces]')
-    parser.add_argument('--directory', '-d', default=os.getcwd(), help='Specify alternative directory [default:current directory]')
-    parser.add_argument('--key', '-k', help='Private key [default:auto generated]')
-    parser.add_argument('--cert', '-c', help='Specify cert [default:self signed]')
+    parser.add_argument('-b', '--bind', metavar='ADDRESS', help='Specify alternate bind address [default: all interfaces]')
+    parser.add_argument('-d', '--directory', default=os.getcwd(), help='Specify alternative directory [default:current directory]')
+    parser.add_argument('-k', '--key', help='Private key [default:auto generated]')
+    parser.add_argument('-c', '--cert', help='Specify cert [default:self signed]')
     parser.add_argument('port', action='store', default=8443, type=int, nargs='?', help='Specify alternate port [default: 8443]')
     args = parser.parse_args()
     if args.cgi:

@@ -62,9 +62,9 @@ def get_urls(files):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='URL encode or decode file(s) or standard input.')
+    parser = argparse.ArgumentParser(description='URL encode or decode file(s) or standard input')
     parser.add_argument('-d', '--decode', action='store_true', help='Decode the given URLs')
-    parser.add_argument('file', nargs='*', help='A file with URLs, one per line.')
+    parser.add_argument('file', nargs='*', help='A file with URLs, one per line')
     args = parser.parse_args()
     for url in get_urls(args.file):
         url = decode(url) if args.decode else encode(url)

@@ -1,2 +1,2 @@
-# sserv
 pyOpenSSL>=19.0.0
+rich>=10.16.2
