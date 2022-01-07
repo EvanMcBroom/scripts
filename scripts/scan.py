@@ -31,34 +31,36 @@ identifiers = {
     'words': r'_^' # Match nothing by default
 }
 
-def archive(file, regexes, password=''):
+def archive(file, regexes, password='', verbose=False):
     # todo
     # tarfile, zipfile, gzip, bz2, mimetypes
     return False
 
-def content(subject, data, regexes):
-    hits = [{'term': term, 'line': hit[0], 'match': hit[1]} for term, regex in regexes.items() for hit in findall(regex, data)]
+def content(subject, data, regexes, verbose=False):
+    hits = [{'term': term, 'line': hit[0], 'match': hit[1]} for term, regex in regexes.items() for hit in findall(data, regex, verbose)]
     if len(hits):
         generate_report(subject, hits)
 
-def directory(path, regexes, recursive=False):
+def directory(path, regexes, recursive=False, verbose=False):
     for child in os.listdir(path):
         if os.path.isfile(child):
-            file(child, regexes)
+            file(child, regexes, verbose)
         elif recursive and os.path.isdir(child):
-            directory(path, regexes, recursive)
+            directory(path, regexes, recursive, verbose)
 
-def file(path, regexes):
+def file(path, regexes, verbose=False):
     with open(path) as file:
-        content(path, file.read(), regexes)
+        content(path, file.read(), regexes, verbose)
     return True
 
-# modified from: https://stackoverflow.com/a/16674895/11039217
-def findall(regex, string, flags=0, end='.*\n'):
+def findall(string, regex, verbose=False, end='.*\n'):
     endings=[match.end() for match in re.finditer(end, string)]
     for match in regex.finditer(string):
+        line = next((_ for _ in range(len(endings)) if endings[_] > match.start()))
         result = match.string[match.start():match.end()]
-        yield (next((_ for _ in range(len(endings)) if endings[_] > match.start())), result)
+        if verbose:
+            result = (string[(endings[line - 1] if line else 0):match.start()] + '[r]' + result + '[not r]' + string[match.end():endings[line]]).strip()
+        yield (line + 1, result)
 
 def generate_report(subject, hits):
     table = Table(Column(header='List', justify='right'), 'Search Term', Column(header='Match', no_wrap=True), title=subject)
@@ -72,24 +74,30 @@ def main():
     import getpass
 
     parser = argparse.ArgumentParser(description='Scan for terms or identifiers in a file, directory, or archive.')
-    parser.add_argument('-c', '--color', action='store_true', help='Highlight scan results')
-    parser.add_argument('-i', '--identifiers', action='store_true', help='Search for all or a subset of identifiers')
+    parser.add_argument('-i', '--identifiers', nargs='?', const=True, type=str, help='Search for all or a subset of identifiers')
     parser.add_argument('-l', '--list', action='store_true', help='List the supported identifiers')
     parser.add_argument('-p', '--password', nargs='?', const=True, type=str, help='Archive password [default: prompt user]')
     parser.add_argument('-r', '--recursive', action='store_true', help='Scan a directory recursively')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Show the full lines that matches are found in')
     parser.add_argument('-w', '--wordlist', type=str, help='A file with words to search for, one per line')
     parser.add_argument('file', nargs='?', type=str, help='A file, directory, or archive to scan')
     args = parser.parse_args()
-    regexes = {term: re.compile(regex, re.MULTILINE) for term, regex in identifiers.items()}
-    #if args.wordlist:
-    #    regexes['words'] = re.compile(regex, re.MULTILINE | re.IGNORECASE)
+    regexes = {}
+    if type(args.identifiers) == bool and args.identifiers:
+        regexes = {term: re.compile(regex, re.MULTILINE) for term, regex in identifiers.items()}
+    elif type(args.identifiers) == str:
+        regexes = {term: re.compile(identifiers[term], re.MULTILINE) for term in args.identifiers.split(',') if term in identifiers.keys()}
+    if args.wordlist:
+        with open(args.wordlist) as wordlist:
+            regexes['words'] = re.compile(r'|'.join(wordlist.read().split()), re.MULTILINE | re.IGNORECASE)
     password = getpass.getpass(prompt='Password: ') if type(args.password) == bool else args.password if type(args.password) == str else ''
+    
     if args.list:
         return print('Supported Identifiers:\n  {}'.format('\n  '.join(identifiers.keys())))
     if len(args.file) > 0:
         if os.path.isdir(args.file):
-            directory(args.file, regexes, args.recursive)
-        elif not archive(args.file, regexes, password) and not file(args.file, regexes):
+            directory(args.file, regexes, args.recursive, args.verbose)
+        elif not archive(args.file, regexes, password, args.verbose) and not file(args.file, regexes, args.verbose):
             print('File type not supported.')
 
 if __name__ == '__main__':
