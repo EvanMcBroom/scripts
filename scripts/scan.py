@@ -4,13 +4,17 @@
 '''File, directory, and archive scanning.'''
 
 __all__ = [
-    'archive', 'content', 'directory', 'file', 'main'
+    'archive', 'content', 'directory', 'file', 'main', 'open_uncompressed'
 ]
 
+import bz2, gzip, lzma
+import mimetypes
 import os
 import re
 from rich.console import Console
 from rich.table import Column, Table
+import tarfile, zipfile
+import tempfile
 
 # Do not include a regex for URLs because it causes too many duplicates with email, domain_name, ipv4_address, and ipv6_address
 identifiers = {
@@ -31,27 +35,49 @@ identifiers = {
     'words': r'_^' # Match nothing by default
 }
 
-def archive(file, regexes, password='', verbose=False):
-    # todo
-    # tarfile, zipfile, gzip, bz2, mimetypes
+def archive(path, regexes, password=None, verbose=False):
+    filetype = mimetypes.guess_type(path, strict=False)
+    if filetype[0] and filetype[0] in ['application/x-tar', 'application/zip']:
+        tempdir = tempfile.TemporaryDirectory()
+        try:
+            with (tarfile.open(path) if filetype[0] == 'application/x-tar' else zipfile.ZipFile(path)) as archive:
+               archive.extractall(path = tempdir.name) if filetype[0] == 'application/x-tar' else archive.extractall(path = tempdir.name, pwd = password.encode('utf-8'))
+            directory(tempdir.name, regexes, recursive=True, verbose=verbose)
+            return True
+        except Exception as _:
+            print(_)
+            return True
+        finally:
+            tempdir.cleanup()
     return False
 
 def content(subject, data, regexes, verbose=False):
+    if type(data) == bytes:
+        try:
+            data = data.decode('utf-8')
+        except:
+            return print('Skipping file with unsupported encoding: {}'.format(data))
     hits = [{'term': term, 'line': hit[0], 'match': hit[1]} for term, regex in regexes.items() for hit in findall(data, regex, verbose)]
     if len(hits):
         generate_report(subject, hits)
 
 def directory(path, regexes, recursive=False, verbose=False):
     for child in os.listdir(path):
+        child = path + os.path.sep + child
         if os.path.isfile(child):
-            file(child, regexes, verbose)
+            if not file(child, regexes, verbose):
+                print('Skipping file with unsupported type: {}'.format(child))
         elif recursive and os.path.isdir(child):
             directory(path, regexes, recursive, verbose)
 
 def file(path, regexes, verbose=False):
-    with open(path) as file:
-        content(path, file.read(), regexes, verbose)
-    return True
+    filetype =  mimetypes.guess_type(path)
+    if filetype[0] and 'text' in filetype[0]:
+        with open_uncompressed(path) as file:
+            content(path, file.read(), regexes, verbose)
+            return True
+    else:
+        return False
 
 def findall(string, regex, verbose=False, end='.*\n'):
     endings=[match.end() for match in re.finditer(end, string)]
@@ -69,6 +95,11 @@ def generate_report(subject, hits):
         table.add_row(str(hit['line']), hit['term'], hit['match'])
     Console().print(table)
 
+def open_uncompressed(path, *args, **kwargs):
+    filetype =  mimetypes.guess_type(path)
+    compressions = {'bzip2': bz2.open, 'gzip': gzip.open, 'xz': lzma.open}
+    return (compressions[filetype[1]] if filetype[1] in compressions.keys() else open)(path, *args, **kwargs)
+
 def main():
     import argparse
     import getpass
@@ -83,6 +114,8 @@ def main():
     parser.add_argument('file', nargs='?', type=str, help='A file, directory, or archive to scan')
     args = parser.parse_args()
     regexes = {}
+    if not args.identifiers and not args.wordlist:
+        return print('No wordlist or identifiers were specified for scanning.')
     if type(args.identifiers) == bool and args.identifiers:
         regexes = {term: re.compile(regex, re.MULTILINE) for term, regex in identifiers.items()}
     elif type(args.identifiers) == str:
