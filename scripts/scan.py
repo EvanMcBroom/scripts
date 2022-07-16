@@ -4,7 +4,7 @@
 '''File, directory, and archive scanning.'''
 
 __all__ = [
-    'archive', 'content', 'directory', 'file', 'main', 'open_uncompressed'
+    'archive', 'directory', 'file', 'main', 'open_uncompressed'
 ]
 
 import bz2, gzip, lzma
@@ -51,16 +51,6 @@ def archive(path, regexes, password=None, verbose=False):
             tempdir.cleanup()
     return False
 
-def content(subject, data, regexes, verbose=False):
-    if type(data) == bytes:
-        try:
-            data = data.decode('utf-8')
-        except:
-            return print('Skipping file with unsupported encoding: {}'.format(data))
-    hits = [{'term': term, 'line': hit[0], 'match': hit[1]} for term, regex in regexes.items() for hit in findall(data, regex, verbose)]
-    if len(hits):
-        generate_report(subject, hits)
-
 def directory(path, regexes, recursive=False, verbose=False):
     for child in os.listdir(path):
         child = path + os.path.sep + child
@@ -71,13 +61,15 @@ def directory(path, regexes, recursive=False, verbose=False):
             directory(path, regexes, recursive, verbose)
 
 def file(path, regexes, verbose=False):
-    filetype =  mimetypes.guess_type(path)
-    if filetype[0] and 'text' in filetype[0]:
-        with open_uncompressed(path) as file:
-            content(path, file.read(), regexes, verbose)
-            return True
-    else:
-        return False
+    binary = type(list(regexes.values())[0].pattern) == bytes
+    with open_uncompressed(path, 'rb' if binary else 'r') as file:
+        hits = list()
+        data = file.read()
+        for term, regex in regexes.items():
+            hits = hits + [{'term': term, 'offset': hex(hit.span()[0]), 'match': str(hit[0])} for hit in re.finditer(regex, data)] if binary else \
+                [{'term': term, 'line': hit[0], 'match': hit[1]} for term, regex in regexes.items() for hit in findall(data, regex, verbose)]
+        if len(hits):
+            generate_report(path, hits, binary)
 
 def findall(string, regex, verbose=False, end='.*\n'):
     endings=[match.end() for match in re.finditer(end, string)]
@@ -88,11 +80,12 @@ def findall(string, regex, verbose=False, end='.*\n'):
             result = (string[(endings[line - 1] if line else 0):match.start()] + '[r]' + result + '[not r]' + string[match.end():endings[line]]).strip()
         yield (line + 1, result)
 
-def generate_report(subject, hits):
-    table = Table(Column(header='List', justify='right'), 'Search Term', Column(header='Match', no_wrap=True), title=subject)
-    hits.sort(key=lambda item: item['line'])
+def generate_report(subject, hits, binary=False):
+    reference = 'offset' if binary else 'line'
+    table = Table(Column(header='Offset' if binary else 'Line', justify='right'), 'Search Term', Column(header='Match', no_wrap=True), title=subject)
+    hits.sort(key=lambda item: item[reference])
     for hit in hits:
-        table.add_row(str(hit['line']), hit['term'], hit['match'])
+        table.add_row(str(hit[reference]), hit['term'], hit['match'])
     Console().print(table)
 
 def open_uncompressed(path, *args, **kwargs):
@@ -105,7 +98,9 @@ def main():
     import getpass
 
     parser = argparse.ArgumentParser(description='Scan for terms or identifiers in a file, directory, or archive.')
-    parser.add_argument('-i', '--identifiers', nargs='?', const=True, type=str, help='Search for all or a subset of identifiers')
+    parser.add_argument('-a', '--all', action='store_true', help='Search for all identifiers')
+    parser.add_argument('-b', '--binary', action='store_true', help='Treat all files as binaries')
+    parser.add_argument('-i', '--identifiers', type=str, help='Search for a subset of identifiers')
     parser.add_argument('-l', '--list', action='store_true', help='List the supported identifiers')
     parser.add_argument('-p', '--password', nargs='?', const=True, type=str, help='Archive password [default: prompt user]')
     parser.add_argument('-r', '--recursive', action='store_true', help='Scan a directory recursively')
@@ -114,24 +109,25 @@ def main():
     parser.add_argument('file', nargs='?', type=str, help='A file, directory, or archive to scan')
     args = parser.parse_args()
     regexes = {}
-    if not args.identifiers and not args.wordlist:
-        return print('No wordlist or identifiers were specified for scanning.')
-    if type(args.identifiers) == bool and args.identifiers:
-        regexes = {term: re.compile(regex, re.MULTILINE) for term, regex in identifiers.items()}
-    elif type(args.identifiers) == str:
-        regexes = {term: re.compile(identifiers[term], re.MULTILINE) for term in args.identifiers.split(',') if term in identifiers.keys()}
-    if args.wordlist:
-        with open(args.wordlist) as wordlist:
-            regexes['words'] = re.compile(r'|'.join(wordlist.read().split()), re.MULTILINE | re.IGNORECASE)
-    password = getpass.getpass(prompt='Password: ') if type(args.password) == bool else args.password if type(args.password) == str else ''
-    
     if args.list:
         return print('Supported Identifiers:\n  {}'.format('\n  '.join(identifiers.keys())))
+    if not args.all and not args.identifiers and not args.wordlist:
+        return print('No wordlist or identifiers were specified for scanning.')
+    if args.all:
+        regexes = {term: re.compile(regex.encode('utf-8') if args.binary else regex, re.MULTILINE) for term, regex in identifiers.items()}
+    elif args.identifiers:
+        regexes = {term: re.compile(identifiers[term].encode('utf-8') if args.binary else identifiers[term], re.MULTILINE) for term in args.identifiers.split(',') if term in identifiers.keys()}
+    if args.wordlist:
+        with open(args.wordlist) as wordlist:
+            regex = r'|'.join(wordlist.read().split())
+            regexes['words'] = re.compile(regex.encode('utf-8') if args.binary else regex, re.MULTILINE | re.IGNORECASE)
+    password = getpass.getpass(prompt='Password: ') if type(args.password) == bool else args.password if type(args.password) == str else ''
+    
     if len(args.file) > 0:
         if os.path.isdir(args.file):
             directory(args.file, regexes, args.recursive, args.verbose)
-        elif not archive(args.file, regexes, password, args.verbose) and not file(args.file, regexes, args.verbose):
-            print('File type not supported.')
+        elif not archive(args.file, regexes, password, args.verbose):
+            file(args.file, regexes, args.verbose)
 
 if __name__ == '__main__':
     main()
