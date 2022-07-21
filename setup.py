@@ -31,6 +31,7 @@ setuptools.setup(
     },
     entry_points={
         'console_scripts': [
+            'bhq=scripts.bhquery:main',
             'scan=scripts.scan:main',
             'sserv=scripts.https:main',
             'urlparse=scripts.urlparse:main'

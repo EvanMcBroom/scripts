@@ -53,7 +53,7 @@ def get_urls(files):
     '''
     if len(files) == 0:
         for line in sys.stdin:
-            yield line
+            yield line.strip()
     else:
         for file in files:
             with open(file) as _:
@@ -75,3 +75,5 @@ if __name__ == '__main__':
         main()
     except BrokenPipeError as _:
         sys.exit(_.errno)
+    except KeyboardInterrupt as _:
+        print()

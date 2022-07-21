@@ -19,9 +19,27 @@ docker run -it --rm evanmcbroom/scripts
 
 ## Commands
 
+- [bhq](#scan)
 - [scan](#scan)
 - [sserv](#sserv)
 - [urlparse](#urlparse)
+
+### bhq (bhquery.py)
+
+Query a BloudHound database.
+If no arguments are provided, `bhq` will connect to a local `Neo4j` server and start an interactive cypher query shell.
+Arguments may be provided to submit individual queries and list, set, or reset nodes marked as owned or high value.
+When marking nodes, node names may be specified as an argument or standard input, similar to the `base64` utility.
+
+List all high value nodes:
+```
+bhq -lv
+```
+
+Mark every node name in a file as owned:
+```
+cat names.txt | bhq -o -s
+```
 
 ### scan
 
