@@ -28,8 +28,13 @@ docker run -it --rm evanmcbroom/scripts
 
 Query a BloudHound database.
 If no arguments are provided, `bhq` will connect to a local `Neo4j` server and start an interactive cypher query shell.
-Arguments may be provided to submit individual queries and list, set, or reset nodes marked as owned or high value.
+Arguments may be provided to submit individual queries, search for nodes with properties that contain a value, and list, set, or reset nodes marked as owned or high value.
 When marking nodes, node names may be specified as an argument or standard input, similar to the `base64` utility.
+
+Find any node with a property value that includes `Lorem.Ipsum`:
+```
+bhq -f Lorem.Ipsum
+```
 
 List all high value nodes:
 ```

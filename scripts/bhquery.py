@@ -18,6 +18,7 @@ class BloodHoundDatabase(neo4j.GraphDatabase):
         
     __list = lambda self, attribute, dry_run=False: self.query('MATCH (node {%s: true}) RETURN node.name' % (attribute), dry_run)
     __set = lambda self, name, attribute, value, dry_run: self.query('MATCH (node {name: \'%s\'}) SET node.%s = %s, node.manuallyset = true RETURN COUNT(*) AS count' % (name, attribute, value), dry_run)
+    find = lambda self, value, dry_run=False: self.query('MATCH (node) where (any(attribute in keys(node) where node[attribute] =~ \'.*%s.*\')) RETURN node' % (value), dry_run)
     list_high_value = lambda self, dry_run=False: self.__list('highvalue', dry_run)
     list_owned = lambda self, dry_run=False: self.__list('owned', dry_run)
     set_high_value = lambda self, name, status=True, dry_run=False: self.__set(name, 'highvalue', 'true' if status else 'false', dry_run)
@@ -69,10 +70,11 @@ def main():
     parser.add_argument('-u', '--uri', default='bolt://localhost:7687', type=str, help='Specify alternate port [default: bolt://localhost:7687]')
     parser.add_argument('--username', default='neo4j', type=str, help='Connection username [default: neo4j]')
     group = parser.add_mutually_exclusive_group()
+    group.add_argument('-f', '--find', metavar='VALUE', type=str, help='Search for a node with an attribute value')
     group.add_argument('-l', '--list', action='store_true', help='List all owned and high value nodes')
-    group.add_argument('-q', '--query', type=str, help='Run cypher query')
-    group.add_argument('-r', '--reset', nargs='?', const=True, type=str, help='Reset item(s) as owned or high value')
-    group.add_argument('-s', '--set', nargs='?', const=True, type=str, help='Set item(s) as owned or high value')
+    group.add_argument('-q', '--query', metavar='CYPHER', type=str, help='Run cypher query')
+    group.add_argument('-r', '--reset', metavar='NAME', nargs='?', const=True, type=str, help='Reset item(s) as owned or high value')
+    group.add_argument('-s', '--set', metavar='NAME', nargs='?', const=True, type=str, help='Set item(s) as owned or high value')
     group = parser.add_argument_group(title='Node Type')
     group.add_argument('-o', '--owned', action='store_true', help='List or set nodes as owned')
     group.add_argument('-v', '--high-value', action='store_true', help='List or set nodes as high value')
@@ -82,7 +84,9 @@ def main():
 
     print = lambda output: rich.console.Console().print(output)
     if database.connected:
-        if args.list:
+        if args.find:
+            print(database.find(args.find, args.dry_run))
+        elif args.list:
             if args.high_value or not args.owned:
                 print(database.list_high_value(args.dry_run))
             if args.owned or not args.high_value:
