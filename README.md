@@ -1,6 +1,8 @@
 # Scripts
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+[![GitHub All Releases](https://img.shields.io/github/downloads/EvanMcBroom/scripts/total?color=yellow)](https://github.com/EvanMcBroom/scripts/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/evanmcbroom/scripts?color=yellow)](https://hub.docker.com/r/evanmcbroom/scripts)
 
 These are my scripts and utility code for \*nix boxes.
 
