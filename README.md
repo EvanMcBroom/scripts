@@ -28,7 +28,7 @@ docker run -it --rm evanmcbroom/scripts
 
 ### bhq (bhquery.py)
 
-Query a BloudHound database.
+Query a legacy BloudHound database (not BHCE or BHE).
 If no arguments are provided, `bhq` will connect to a local `Neo4j` server and start an interactive cypher query shell.
 Arguments may be provided to submit individual queries, search for nodes with properties that contain a value, and list, set, or reset nodes marked as owned or high value.
 When marking nodes, node names may be specified as an argument or standard input, similar to the `base64` utility.
