@@ -21,7 +21,7 @@ docker run -it --rm evanmcbroom/scripts
 
 ## Commands
 
-- [bhq](#scan)
+- [bhq](#bhq-bhquerypy)
 - [scan](#scan)
 - [sserv](#sserv)
 - [urlparse](#urlparse)
@@ -89,3 +89,4 @@ Decode a file:
 ```
 cat input.txt | urlparse -d
 ```
+
