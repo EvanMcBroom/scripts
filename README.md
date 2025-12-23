@@ -9,8 +9,7 @@ These are my scripts and utility code for \*nix boxes.
 ## Quickstart &ndash; install from source
 
 ```bash
-git clone https://github.com/EvanMcBroom/scripts
-pip3 install ./scripts
+python3 -m pip install --break-system-packages git+https://github.com/EvanMcBroom/scripts
 ```
 
 ## ...or run in a docker container.
@@ -89,4 +88,5 @@ Decode a file:
 ```
 cat input.txt | urlparse -d
 ```
+
 
